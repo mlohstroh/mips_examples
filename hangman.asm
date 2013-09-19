@@ -4,18 +4,42 @@ main:
 	jal loadWords
 	jal prepForCount
 	jal countWords
+	
+gameSetup:
 	jal chooseRandomWord
+	jal printChosenWord
+	jal gameLoop
 	
-	#jal promptUser
-	
+gameLoop:
 	li $v0, 10
+	syscall	
+	
+	
+printChosenWord:
+	li $v0, 4
+	la $a0, chosenWord
 	syscall
+
+	jr $ra
 	
 chooseRandomWord:
 	#choose a random index
 	li $v0, 42
 	li $a0, 1234	#it needs a random seed, is this the best way of doing this?
-	move $a1, $s0
+	move $a1, $s0 #max number
+	syscall
+	move $t0, $a0
+	
+	la $t1, storedWords
+	la $t2, chosenWord
+	
+	# http://www.cs.sbu.edu/dlevine/PreviousCourses/Fall%202003/CS231Fall2003/Labs/Lab2/Lab2Hint.htm
+	add $t0, $t0, $t0
+	add $t0, $t0, $t0
+	add $t0, $t0, $t1
+	lw $t3, 0($t1)
+	sw $t3, ($t2)
+	
 	
 	jr $ra
 
@@ -50,9 +74,7 @@ skipped:	#TODO: Figure out how why this even works
 	j countWords
 
 finishCounting:
-	li, $v0, 1
-	move $a0, $s0
-	syscall
+	jal gameSetup
 	
 loadWords:
 	li $v0, 13 #open file syscall
@@ -89,4 +111,4 @@ storedWords:
 	.align 2
 	.space 1000000 #totally unsure about the size for these...
 chosenWord:
-	.space 10
+	.space 100
