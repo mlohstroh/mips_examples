@@ -3,7 +3,7 @@
 main:
 	jal loadWords
 	jal prepForCount
-	#jal countWords
+	jal countWords
 	
 	#jal promptUser
 	
@@ -12,7 +12,7 @@ main:
 	
 promptUser:
 	li $v0, 4
-#	la $a0, greeting
+	la $a0, greeting
 	syscall
 	jr $ra
 
@@ -28,17 +28,21 @@ prepForCount:
 countWords:
 	lb $t0, ($a0)
 	beq $t0, 0, finishCounting
+	bne $t0, 10, skipped
 	add $s0, $s0, 1 #increment counter
 	add $a0, $a0, 1
 	sw $a0, ($a1)
 	add $a1, $a1, 4
 	j countWords
 	
+skipped:
+	add $a0, $a0, 1	
+	j countWords
+
 finishCounting:
 	li, $v0, 1
 	move $a0, $s0
 	syscall
-
 	
 loadWords:
 	li $v0, 13 #open file syscall
@@ -51,7 +55,7 @@ loadWords:
 	li 	$v0, 14
 	move 	$a0, $s6
 	la 	$a1, buffer #address for loaded words
-	li, 	$a2, 1024 #buffer size
+	li, 	$a2, 100000 #buffer size
 	syscall
 	
 	li $v0, 16 #close file
@@ -61,7 +65,8 @@ loadWords:
 	jr $ra #just return
 
 .data
-
+greeting:
+  .asciiz "Welcome to Hangman. You must guess the word that was randomly selected from a dictionary"
 #Strings
 wordsFile:
 	.asciiz "words"
@@ -69,7 +74,7 @@ wordsFile:
 
 #Addresses to hold info
 buffer: 
-	.space 1024
+	.space 100000
 storedWords:
 	.align 2
 	.space 1000000 #totally unsure about the size for these...
