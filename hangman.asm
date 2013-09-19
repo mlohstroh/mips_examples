@@ -4,12 +4,21 @@ main:
 	jal loadWords
 	jal prepForCount
 	jal countWords
+	jal chooseRandomWord
 	
 	#jal promptUser
 	
 	li $v0, 10
 	syscall
 	
+chooseRandomWord:
+	#choose a random index
+	li $v0, 42
+	li $a0, 1234	#it needs a random seed, is this the best way of doing this?
+	move $a1, $s0
+	
+	jr $ra
+
 promptUser:
 	li $v0, 4
 	la $a0, greeting
@@ -35,7 +44,8 @@ countWords:
 	add $a1, $a1, 4
 	j countWords
 	
-skipped:
+# https://github.com/mlohstroh/Word-Hazard/blob/master/Word%20Hazard%20FINAL/importing.asm#L58
+skipped:	#TODO: Figure out how why this even works
 	add $a0, $a0, 1	
 	j countWords
 
