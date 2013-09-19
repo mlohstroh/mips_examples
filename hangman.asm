@@ -25,7 +25,6 @@ printChosenWord:
 chooseRandomWord:
 	#choose a random index
 	li $v0, 42
-	li $a0, 1234	#it needs a random seed, is this the best way of doing this?
 	move $a1, $s0 #max number
 	syscall
 	move $t0, $a0
@@ -37,10 +36,10 @@ chooseRandomWord:
 	add $t0, $t0, $t0
 	add $t0, $t0, $t0
 	add $t0, $t0, $t1
-	lw $t3, 0($t1)
-	sw $t3, ($t2)
-	
-	
+	la $t3, ($t0)
+	lw $t4, ($t3) #a pointer to a pointer?
+	sw $t4, ($t2)
+
 	jr $ra
 
 promptUser:
