@@ -3,7 +3,6 @@
 main:
 	jal loadWords
 	jal prepForCount
-	jal countWords
 	
 gameSetup:
 	jal chooseRandomWord
@@ -29,18 +28,37 @@ chooseRandomWord:
 	syscall
 	move $t0, $a0
 	
-	la $t1, storedWords
-	la $t2, chosenWord
-	
-	# http://www.cs.sbu.edu/dlevine/PreviousCourses/Fall%202003/CS231Fall2003/Labs/Lab2/Lab2Hint.htm
-	add $t0, $t0, $t0
-	add $t0, $t0, $t0
-	add $t0, $t0, $t1
-	la $t3, ($t0)
-	lw $t4, ($t3) #a pointer to a pointer?
-	sw $t4, ($t2)
+	la $t1, wordAddresses
+	mul $t5, $t0, 4
+	add $t0, $t1, $t5	#add the base address plus the index
+	lw $s0, ($t0)
+	move $a0, $s0
+
+
+	j getWordFromAddress
 
 	jr $ra
+
+getWordFromAddress: 	#expects base address to be in $a0
+	li $s1, 0 #current position in word
+	la $s2, chosenWord
+	
+readWord:
+	add $t1, $a0, $s1 #offset in buffer
+	add $t4, $s2, $s1
+	lb $t3, ($t1) 
+	beq $t3, 0, endReadWord #end if we reach a null terminator
+	sb $t3, ($t4)
+	j readWord
+	
+endReadWord:
+	li $v1, 4
+	la $a0, chosenWord
+	syscall
+
+	li $v1, 10
+	syscall
+			
 
 promptUser:
 	li $v0, 4
@@ -50,26 +68,26 @@ promptUser:
 
 prepForCount:
 	la $a0, buffer
-	la $a1, storedWords
+	la $a1, wordAddresses
 	sw $a0, ($a1)
 	li $s0, 1
+	li $s2, 0 #current character count
 	add $a1, $a1, 4
-	jr $ra
 
 #sets $s0 as the number of words in file
 countWords:
-	lb $t0, ($a0)
-	beq $t0, 0, finishCounting
-	bne $t0, 10, skipped
-	add $s0, $s0, 1 #increment counter
-	add $a0, $a0, 1
+	lb $t0, ($a0) #ao is the start of my word list
+	add $s2, $s2, 1
+	beq $s2, $s7, finishCounting
+	bne $t0, 10, incrementWordCount
+	add $s0, $s0, 1 #increment word counter
+	add $a0, $a0, 1 #increment word position
 	sw $a0, ($a1)
-	add $a1, $a1, 4
+	add $a1, $a1, 4 #increment byte position
 	j countWords
 	
-# https://github.com/mlohstroh/Word-Hazard/blob/master/Word%20Hazard%20FINAL/importing.asm#L58
-skipped:	#TODO: Figure out how why this even works
-	add $a0, $a0, 1	
+incrementWordCount:
+	add $a0, $a0, 1
 	j countWords
 
 finishCounting:
@@ -89,6 +107,8 @@ loadWords:
 	li, 	$a2, 100000 #buffer size
 	syscall
 	
+	move $s7, $v0 #number of bytes read
+	
 	li $v0, 16 #close file
 	move $a0, $s6
 	syscall
@@ -105,8 +125,9 @@ wordsFile:
 
 #Addresses to hold info
 buffer: 
+	.align 2
 	.space 100000
-storedWords:
+wordAddresses:
 	.align 2
 	.space 1000000 #totally unsure about the size for these...
 chosenWord:
