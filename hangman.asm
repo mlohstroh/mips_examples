@@ -31,7 +31,7 @@ chooseRandomWord:
 	la $t1, wordAddresses
 	mul $t5, $t0, 4
 	add $t0, $t1, $t5	#add the base address plus the index
-	lw $s0, ($t0)
+	la $s0, ($t0) #load into $s0 the address of the chosen word 
 	move $a0, $s0
 
 
@@ -43,12 +43,16 @@ getWordFromAddress: 	#expects base address to be in $a0
 	li $s1, 0 #current position in word
 	la $s2, chosenWord
 	
-readWord:
-	add $t1, $a0, $s1 #offset in buffer
-	add $t4, $s2, $s1
-	lb $t3, ($t1) 
-	beq $t3, 0, endReadWord #end if we reach a null terminator
-	sb $t3, ($t4)
+readWord: #1 byte at a time
+	add $t1, $a0, $s1 #$t1 isoffset in buffer for word list
+	add $t4, $s2, $s1 #$t4 is offset in buffer for chosen word
+	lb $t3, ($t1) #copy byte located at $t1 to $t3
+	sb $t3, ($t4) #store byte at t3 in address stored in t4
+	#lb $t3, ($t1) 
+	#sb $t3, ($t4)
+	beq $t3, 10, endReadWord #end if we reach a newline character
+	addi $s1, $s1, 1 #go to next byte
+	
 	j readWord
 	
 endReadWord:
@@ -69,25 +73,30 @@ promptUser:
 prepForCount:
 	la $a0, buffer
 	la $a1, wordAddresses
-	sw $a0, ($a1)
+	lb $t0, ($a0)
+	sb $t0, ($a1)
 	li $s0, 1
 	li $s2, 0 #current character count
-	add $a1, $a1, 4
+	#add $a1, $a1, 1
 
 #sets $s0 as the number of words in file
 countWords:
+	add $a0, $a0, 1 #increment byte position
+	add $a1, $a1, 1 #increment byte position
 	lb $t0, ($a0) #ao is the start of my word list
 	add $s2, $s2, 1
+	lb $t0, ($a0)
+	sb $t0, ($a1)
+	beq $t0, 10, incrementWordCount
 	beq $s2, $s7, finishCounting
-	bne $t0, 10, incrementWordCount
-	add $s0, $s0, 1 #increment word counter
-	add $a0, $a0, 1 #increment word position
-	sw $a0, ($a1)
-	add $a1, $a1, 4 #increment byte position
+	#add $s0, $s0, 1 #increment word counter
+	#sb $a0, ($a1)
+	#lb $t0, ($a0)
+	#sb $t0, ($a1)
 	j countWords
 	
 incrementWordCount:
-	add $a0, $a0, 1
+	add $s0, $s0, 1
 	j countWords
 
 finishCounting:
@@ -104,7 +113,7 @@ loadWords:
 	li 	$v0, 14
 	move 	$a0, $s6
 	la 	$a1, buffer #address for loaded words
-	li, 	$a2, 100000 #buffer size
+	li, 	$a2, 1000 #buffer size
 	syscall
 	
 	move $s7, $v0 #number of bytes read
@@ -117,7 +126,7 @@ loadWords:
 
 .data
 greeting:
-  .asciiz "Welcome to Hangman. You must guess the word that was randomly selected from a dictionary"
+  .asciiz "Welcome to Hangman. You must guess the word that was randomly selected from a dictionary\n"
 #Strings
 wordsFile:
 	.asciiz "words"
@@ -126,9 +135,9 @@ wordsFile:
 #Addresses to hold info
 buffer: 
 	.align 2
-	.space 100000
+	.space 1000
 wordAddresses:
 	.align 2
-	.space 1000000 #totally unsure about the size for these...
+	.space 1000 #1000 bytes 
 chosenWord:
 	.space 100
