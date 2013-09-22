@@ -24,20 +24,37 @@ printChosenWord:
 chooseRandomWord:
 	#choose a random index
 	li $v0, 42
-	move $a1, $s0 #max number
+	#add $t0, $s0, -1 #looking for indices here, so subtract 1
+	move $a1, $s0 #max number must be less than number of words
 	syscall
-	move $t0, $a0
+	
+	move $t0, $a0 #t0 has random index in it
 	
 	la $t1, wordAddresses
-	mul $t5, $t0, 4
-	add $t0, $t1, $t5	#add the base address plus the index
+	
+	li $s5, 0 #s5 is the number of bytes to the word; initialize it to 0
+	addi $a0, $t0, -1 #-1 to get index
+	#sw $ra, ($t7) #save return address for later
+	move $t7, $ra #save return address for later
+	bgezal $t0, getAddressOffset #if index is >= 0 getAddressOffset
+	move $ra, $t7 #return return address to its original state
+	add $t0, $t1, $s5	#add the base address plus the index
 	la $s0, ($t0) #load into $s0 the address of the chosen word 
 	move $a0, $s0
-
-
+	
 	j getWordFromAddress
+	#jr $ra #go back to the return address saved earlier (this statement is never reached)
 
-	jr $ra
+getAddressOffset:#expects a0 to be current index to add (a0 = currIndex)
+	move $t3, $a0 #t3 has index to add
+	mul $t3, $t3, 4 #t3 now has byte offset
+	la $t4, wordSizes
+	add $t4, $t4, $t3 # add offset and memory of wordSizes[]
+	lw $t8, ($t4) #currentWordSize = wordSizes[currIndex]
+	add $s5, $s5, $t8 #offset += currentWordSize
+	addi $a0, $a0, -1 #currIndex --
+	bgez $a0, getAddressOffset #if index is still 0 or above, keep adding word sizes
+	jr $ra		#get back to chooseRandomWord
 
 getWordFromAddress: 	#expects base address to be in $a0
 	li $s1, 0 #current position in word
@@ -75,19 +92,21 @@ prepForCount:
 	la $a1, wordAddresses
 	lb $t0, ($a0)
 	sb $t0, ($a1)
-	li $s0, 1
+	li $s0, 1 #number of words
 	li $s2, 0 #current character count
+	li $s3, 1 #current word size
 	#add $a1, $a1, 1
 
 #sets $s0 as the number of words in file
 countWords:
 	add $a0, $a0, 1 #increment byte position
 	add $a1, $a1, 1 #increment byte position
-	lb $t0, ($a0) #ao is the start of my word list
+	#lb $t0, ($a0) #ao is the start of my word list
 	add $s2, $s2, 1
+	add $s3, $s3, 1
 	lb $t0, ($a0)
 	sb $t0, ($a1)
-	beq $t0, 10, incrementWordCount
+	beq $t0, 10, incrementWordCount #increment word count when newline is encountered
 	beq $s2, $s7, finishCounting
 	#add $s0, $s0, 1 #increment word counter
 	#sb $a0, ($a1)
@@ -96,7 +115,13 @@ countWords:
 	j countWords
 	
 incrementWordCount:
-	add $s0, $s0, 1
+	addi $t5, $s0, -1 #decrement the current word count to get the current index in t5
+	mul $t4, $s0, 4 #store in t4 the offset for the current word (4bytes / int)
+	la $t6, wordSizes
+	add $t4, $t4, $t6 #add offset to address of wordSizes[ ] and store wordSizes[currentWord - 1]' address in t4
+	sw $s3, ($t4) #wordSizes[currentWord - 1] = currentWordSize;
+	li $s3, 0 #currentWordSize = 0; 
+	add $s0, $s0, 1 #currentWord++;
 	j countWords
 
 finishCounting:
@@ -139,5 +164,8 @@ buffer:
 wordAddresses:
 	.align 2
 	.space 1000 #1000 bytes 
+wordSizes:
+	.align 2
+	.space 4000
 chosenWord:
 	.space 100
